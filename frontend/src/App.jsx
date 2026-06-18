@@ -5,6 +5,10 @@ import {
   Trash2, ShieldCheck, HelpCircle, FileText, Cpu
 } from 'lucide-react';
 
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? ''
+  : 'https://xeno-bckend.onrender.com';
+
 export default function App() {
 
 
@@ -25,7 +29,7 @@ export default function App() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    fetch('/api/validate')
+    fetch(`${API_BASE}/api/validate`)
       .catch(e => console.log("Backend offline or local dev fallback."));
   }, []);
 
@@ -51,7 +55,7 @@ export default function App() {
     formData.append('countryCode', countryCode);
 
     try {
-      const response = await fetch('/api/validate', {
+      const response = await fetch(`${API_BASE}/api/validate`, {
         method: 'POST',
         body: formData
       });
@@ -151,7 +155,7 @@ export default function App() {
       .map(r => r.cleaned);
 
     try {
-      const response = await fetch('/api/split', {
+      const response = await fetch(`${API_BASE}/api/split`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -195,7 +199,7 @@ export default function App() {
     setLoadingAi(true);
     setAiSuggestions(null);
     try {
-      const response = await fetch('/api/ai-suggestions', {
+      const response = await fetch(`${API_BASE}/api/ai-suggestions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
