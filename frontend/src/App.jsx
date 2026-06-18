@@ -51,7 +51,7 @@ export default function App() {
     formData.append('countryCode', countryCode);
 
     try {
-      const response = await fetch('http://localhost:5000/api/validate', {
+      const response = await fetch('https://xeno-bckend.onrender.com/api/validate', {
         method: 'POST',
         body: formData
       });
@@ -141,7 +141,7 @@ export default function App() {
       .map(r => r.original);
 
     try {
-      const response = await fetch('http://localhost:5000/api/split', {
+      const response = await fetch('https://xeno-bckend.onrender.com/api/split', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -174,7 +174,7 @@ export default function App() {
     setLoadingAi(true);
     setAiSuggestions(null);
     try {
-      const response = await fetch('http://localhost:5000/api/ai-suggestions', {
+      const response = await fetch('https://xeno-bckend.onrender.com/api/ai-suggestions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
