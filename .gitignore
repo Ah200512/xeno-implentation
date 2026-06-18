@@ -1,0 +1,17 @@
+# Ignore all files and directories at the root level
+/*
+
+# Do not ignore backend and frontend directories
+!/backend/
+!/frontend/
+
+# Do not ignore repository documentation
+!/README.md
+!/.gitignore
+
+# Ignore node_modules, local envs, builds and uploads inside backend & frontend
+/backend/node_modules/
+/backend/uploads/*
+/backend/.env
+/frontend/node_modules/
+/frontend/dist/
