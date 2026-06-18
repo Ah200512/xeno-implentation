@@ -51,17 +51,27 @@ export default function App() {
     formData.append('countryCode', countryCode);
 
     try {
-      const response = await fetch('https://xeno-bckend.onrender.com/api/validate', {
+      const response = await fetch('/api/validate', {
         method: 'POST',
         body: formData
       });
-      const data = await response.json();
       if (response.ok) {
+        const data = await response.json();
         setValidationResult(data);
-
-
       } else {
-        alert(data.error || 'Failed to validate file');
+        let errMsg = 'Failed to validate file';
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch (e) {
+          try {
+            const text = await response.text();
+            errMsg = text.substring(0, 100) || response.statusText || errMsg;
+          } catch (_) {
+            errMsg = response.statusText || errMsg;
+          }
+        }
+        alert(errMsg);
       }
     } catch (error) {
       alert('Error connecting to backend server. Make sure node backend is running on port 5000.');
@@ -104,7 +114,7 @@ export default function App() {
 
     const allRows = [...validationResult.validRows, ...validationResult.invalidRows]
       .sort((a, b) => a.rowIndex - b.rowIndex)
-      .map(r => r.original);
+      .map(r => r.cleaned);
 
     if (allRows.length === 0) return;
 
@@ -138,10 +148,10 @@ export default function App() {
 
     const allRows = [...validationResult.validRows, ...validationResult.invalidRows]
       .sort((a, b) => a.rowIndex - b.rowIndex)
-      .map(r => r.original);
+      .map(r => r.cleaned);
 
     try {
-      const response = await fetch('https://xeno-bckend.onrender.com/api/split', {
+      const response = await fetch('/api/split', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -160,8 +170,19 @@ export default function App() {
         link.setAttribute('download', 'split_chunks.zip');
         link.click();
       } else {
-        const errData = await response.json();
-        alert(errData.error || 'Failed to split CSV');
+        let errMsg = 'Failed to split CSV';
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch (e) {
+          try {
+            const text = await response.text();
+            errMsg = text.substring(0, 100) || response.statusText || errMsg;
+          } catch (_) {
+            errMsg = response.statusText || errMsg;
+          }
+        }
+        alert(errMsg);
       }
     } catch (error) {
       alert('Error split request failed: ' + error.message);
@@ -174,7 +195,7 @@ export default function App() {
     setLoadingAi(true);
     setAiSuggestions(null);
     try {
-      const response = await fetch('https://xeno-bckend.onrender.com/api/ai-suggestions', {
+      const response = await fetch('/api/ai-suggestions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -197,14 +218,14 @@ export default function App() {
     if (!selectedRow || !validationResult) return;
 
     const updatedOriginal = { ...selectedRow.original, ...cleanedFields };
-
-
+    const updatedCleaned = { ...selectedRow.cleaned, ...cleanedFields };
 
     const newErrors = selectedRow.errors.filter(err => !Object.keys(cleanedFields).includes(err.field));
 
     const updatedRow = {
       ...selectedRow,
       original: updatedOriginal,
+      cleaned: updatedCleaned,
       errors: newErrors,
       isValid: newErrors.length === 0
     };
