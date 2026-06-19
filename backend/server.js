@@ -360,7 +360,7 @@ function getRowStringKey(row) {
 
 function normalizePaymentMode(mode) {
   if (!mode) return '';
-  const val = mode.trim().toLowerCase().replace(/[\s_-]+/g, '');
+  const val = mode.trim().toLowerCase().replace(/[\s_.-]+/g, '');
   
   if (val.includes('card') || val === 'credit' || val === 'debit') {
     return 'card';
