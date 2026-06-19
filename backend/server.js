@@ -351,6 +351,35 @@ function getNormalizedRow(row) {
   return normalized;
 }
 
+function getRowStringKey(row) {
+  return Object.keys(row)
+    .sort()
+    .map(key => `${key}:${String(row[key] || '').trim().toLowerCase()}`)
+    .join('|');
+}
+
+function normalizePaymentMode(mode) {
+  if (!mode) return '';
+  const val = mode.trim().toLowerCase().replace(/[\s_-]+/g, '');
+  
+  if (val.includes('card') || val === 'credit' || val === 'debit') {
+    return 'card';
+  }
+  if (val === 'upi') {
+    return 'upi';
+  }
+  if (val === 'cash' || val === 'cashondelivery' || val === 'cod') {
+    return 'cash';
+  }
+  if (val === 'netbanking' || val === 'internetbanking') {
+    return 'netbanking';
+  }
+  if (val === 'wallet' || val === 'ewallet') {
+    return 'wallet';
+  }
+  return val;
+}
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ALLOWED_PAYMENT_MODES = ['card', 'upi', 'cash', 'netbanking', 'wallet'];
 
@@ -385,18 +414,8 @@ app.post('/api/validate', upload.single('file'), (req, res) => {
         });
       }
 
-      // Calculate frequencies for duplicate checking
-      const orderIdCounts = {};
-      const customerIdCounts = {};
-
-      normalizedRows.forEach(row => {
-        if (row.order_id) {
-          orderIdCounts[row.order_id] = (orderIdCounts[row.order_id] || 0) + 1;
-        }
-        if (row.customer_id) {
-          customerIdCounts[row.customer_id] = (customerIdCounts[row.customer_id] || 0) + 1;
-        }
-      });
+      // Keep track of seen rows for exact full-row duplicate checking
+      const seenRowKeys = new Set();
 
       const validRows = [];
       const invalidRows = [];
@@ -406,12 +425,17 @@ app.post('/api/validate', upload.single('file'), (req, res) => {
         const warnings = [];
         const cleanedRow = { ...row };
 
+        // Duplicate row check
+        const rowKey = getRowStringKey(row);
+        if (seenRowKeys.has(rowKey)) {
+          errors.push({ field: 'order_id', message: 'Duplicate row: This record is an exact duplicate of another row.' });
+        }
+        seenRowKeys.add(rowKey);
+
         // 1. Order ID check
         if (presentNormalizedFields.has('order_id')) {
           if (!row.order_id) {
             errors.push({ field: 'order_id', message: 'Order ID is empty.' });
-          } else if (orderIdCounts[row.order_id] > 1) {
-            errors.push({ field: 'order_id', message: `Duplicate Order ID: '${row.order_id}'` });
           }
         }
 
@@ -419,8 +443,6 @@ app.post('/api/validate', upload.single('file'), (req, res) => {
         if (presentNormalizedFields.has('customer_id')) {
           if (!row.customer_id) {
             errors.push({ field: 'customer_id', message: 'Customer ID is empty.' });
-          } else if (customerIdCounts[row.customer_id] > 1) {
-            errors.push({ field: 'customer_id', message: `Duplicate Customer ID: '${row.customer_id}'` });
           }
         }
 
@@ -523,7 +545,7 @@ app.post('/api/validate', upload.single('file'), (req, res) => {
           if (!row.payment_mode) {
             errors.push({ field: 'payment_mode', message: 'Payment Mode is empty.' });
           } else {
-            const cleanMode = row.payment_mode.toLowerCase().replace(/\s+/g, '');
+            const cleanMode = normalizePaymentMode(row.payment_mode);
             payment_valid = ALLOWED_PAYMENT_MODES.includes(cleanMode);
             if (!payment_valid) {
               errors.push({
@@ -741,13 +763,12 @@ Respond ONLY with the JSON object. Do not wrap it in markdown block or include a
       if (!val) {
         suggestions.cleanedFields[field] = 'Card';
       } else {
-        const cleanMode = val.toLowerCase().replace(/\s+/g, '');
-        if (cleanMode.includes('upi')) suggestions.cleanedFields[field] = 'UPI';
-        else if (cleanMode.includes('card')) suggestions.cleanedFields[field] = 'Card';
-        else if (cleanMode.includes('cash')) suggestions.cleanedFields[field] = 'Cash';
-        else if (cleanMode.includes('wallet')) suggestions.cleanedFields[field] = 'Wallet';
-        else if (cleanMode.includes('banking')) suggestions.cleanedFields[field] = 'NetBanking';
-        else suggestions.cleanedFields[field] = 'Card';
+        const cleanMode = normalizePaymentMode(val);
+        const standardModes = {
+          'card': 'Card', 'upi': 'UPI', 'cash': 'Cash',
+          'netbanking': 'NetBanking', 'wallet': 'Wallet'
+        };
+        suggestions.cleanedFields[field] = standardModes[cleanMode] || 'Card';
       }
     }
   });
